@@ -3,7 +3,7 @@ grabber@schedulesdirect.org
 
 v0.21 2013-05-02
 
-Please see the Wiki at https://github.com/rkulagowski/tv_grab_na_sd/wiki for
+Please see the Wiki at https://github.com/SchedulesDirect/JSON-Service/wiki for
 information regarding the format and the field descriptions.
 
 This grabber uses the new Schedules Direct API for downloading schedule
