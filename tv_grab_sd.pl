@@ -74,7 +74,7 @@ if ($useBetaServer)
     $baseurl = "http://23.21.174.111";
     print "Using beta server.\n";
     # API must match server version.
-    $api = 20130502;
+    $api = 20130512;
 }
 else
 {
