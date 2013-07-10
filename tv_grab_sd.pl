@@ -74,14 +74,14 @@ if ($useBetaServer)
     $baseurl = "http://23.21.174.111";
     print "Using beta server.\n";
     # API must match server version.
-    $api = 20130512;
+    $api = 20130709;
 }
 else
 {
     $baseurl = "https://data2.schedulesdirect.org";
     print "Using production server.\n";
     # API must match server version.
-    $api = 20130311;
+    $api = 20130512;
 }
 
 if ($help)
@@ -112,7 +112,9 @@ This script supports the following command line arguments.
                         providers in your area, otherwise you'll be
                         prompted.  If you're specifying a Canadian postal
                         code, then use six consecutive characters, no
-                        embedded spaces.
+                        embedded spaces. If you're specifying an
+                        international lineup, use the ISO3166 two-character
+                        country code.
 
 --changepassword	Enters the password change dialog on the client.
 
