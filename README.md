@@ -1,7 +1,7 @@
 Robert Kulagowski
 grabber@schedulesdirect.org
 
-v0.21 2013-05-02
+v0.23 2013-10-11
 
 Please see the Wiki at https://github.com/SchedulesDirect/JSON-Service/wiki for
 information regarding the format and the field descriptions.
@@ -20,8 +20,7 @@ if you're on Ubuntu.
 
 When run with --help, the script will print:
 
-=================================================
-tv_grab_sd.pl v0.21 2013-05-02
+tv_grab_sd.pl v0.23 2013-10-11
 Usage: tv_grab_sd.pl [switches]
 
 This script supports the following command line arguments.
@@ -40,23 +39,22 @@ This script supports the following command line arguments.
 --username              Login credentials.
 --password              Login credentials. NOTE: These will be visible in "ps".
 
+--country               To obtain the headends for a particular country, specify
+                        the ISO3166 two-character country code. If not specified,
+                        the script assumes "US".
 --zipcode               When obtaining the channel list from Schedules
                         Direct you can supply your 5-digit zip code or
-                        6-character postal code to get a list of cable TV
+                        4-character postal code to get a list of cable TV
                         providers in your area, otherwise you'll be
                         prompted.  If you're specifying a Canadian postal
-                        code, then use six consecutive characters, no
+                        code, then use four consecutive characters, no
                         embedded spaces.
-
---changepassword        Enters the password change dialog on the client.
 
 --metadataupdate        Updates incorrect metdata.
 
---metadata              Retrieve all metadata.
-
 --add                   Add a headend.
-
 --delete                Delete a headend.
+--subscribed            Retrieve only the subscribed headends.
 
 --ack                   Acknowlege a message, so that it doesn't appear
                         in the status object.
@@ -70,11 +68,12 @@ NOTE: This grabber is intended for developers who wish to have a starting
 point for their own efforts.  There is very little bug checking and it is
 not optimized in any way.
 
+
 =================================================
 
 When the script is run for the first time, if you don't pass --username
---password and --zipcode as command-line parameters, you'll be prompted for
-your Schedules Direct account information.
+--password --country and --zipcode as command-line parameters, you'll be
+prompted for your Schedules Direct account information.
 
 Once your account has been validated, the script will download the list of
 headends in your zip code / postal code. Type the number of the headend you
