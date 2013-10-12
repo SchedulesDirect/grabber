@@ -14,8 +14,8 @@ use Digest::SHA qw(sha1_hex);
 # you probably want
 # use Digest::SHA1 qw(sha1_hex);
 
-my $version = "0.22";
-my $date    = "2013-06-27";
+my $version = "0.23";
+my $date    = "2013-10-11";
 
 my @lineupdata;
 my $i = 0;
@@ -25,13 +25,12 @@ my %headend_queued;
 my $username = "";
 my $password = "";
 my $help;
-my $zipcode = "0";
+my $country = "";
+my $zipcode = "";
 my $randhash;
 my $response;
 my $debugenabled   = 0;
 my $configure      = 0;
-my $changepassword = 0;
-my $metadata       = 0;
 my $metadataupdate = 0;
 my $addHeadend     = "";
 my $deleteHeadend  = "";
@@ -56,11 +55,11 @@ GetOptions(
     'debug'          => \$debugenabled,
     'configure'      => \$configure,
     'zipcode=s'      => \$zipcode,
+    'country=s'      => \$country,
     'username=s'     => \$username,
     'password=s'     => \$password,
-    'changepassword' => \$changepassword,
     'metadataupdate' => \$metadataupdate,
-    'metadata'       => \$metadata,
+    'subscribed'     => \$getOnlyMySubscribedLineups,
     'beta'           => \$useBetaServer,
     'add=s'          => \$addHeadend,
     'delete=s'       => \$deleteHeadend,
@@ -106,25 +105,22 @@ This script supports the following command line arguments.
 --username      	Login credentials.
 --password      	Login credentials. NOTE: These will be visible in "ps".
 
+--country		To obtain the headends for a particular country, specify
+                        the ISO3166 two-character country code. If not specified,
+                        the script assumes "US".
 --zipcode       	When obtaining the channel list from Schedules
                         Direct you can supply your 5-digit zip code or
-                        6-character postal code to get a list of cable TV
+                        4-character postal code to get a list of cable TV
                         providers in your area, otherwise you'll be
                         prompted.  If you're specifying a Canadian postal
-                        code, then use six consecutive characters, no
-                        embedded spaces. If you're specifying an
-                        international lineup, use the ISO3166 two-character
-                        country code.
-
---changepassword	Enters the password change dialog on the client.
+                        code, then use four consecutive characters, no
+                        embedded spaces.
 
 --metadataupdate	Updates incorrect metdata.
 
---metadata	        Retrieve all metadata.
-
 --add			Add a headend.
-
 --delete		Delete a headend.
+--subscribed		Retrieve only the subscribed headends.
 
 --ack			Acknowlege a message, so that it doesn't appear
                         in the status object.
@@ -181,27 +177,6 @@ if ( -e "tv_grab_sd.conf" && $configure == 0 )
     }
 
     $randhash = &login_to_sd( $username, $password );
-
-    if ($changepassword)
-    {
-        print "New password: ";
-        my $pass1 = <STDIN>;
-        print "Confirm new password: ";
-        my $pass2 = <STDIN>;
-
-        if ( $pass1 ne $pass2 )
-        {
-            print "\nPasswords did not match. Exiting.\n";
-            exit;
-        }
-
-        chomp($pass2);
-
-        &change_password($pass2);
-
-        exit;
-
-    }
 
     if ($metadataupdate)
     {
@@ -261,11 +236,6 @@ if ( -e "tv_grab_sd.conf" && $configure == 0 )
         &download_programs($randhash);
     }
 
-    if ($metadata)
-    {
-        &downloadMetadata($randhash);
-    }
-
     if ($ackMessage)
     {
         &ackMessage( $randhash, $ackMessage );
@@ -288,13 +258,26 @@ if ( $password eq "" )
     chomp( $password = <STDIN> );
 }
 
+if ($country eq "")
+{
+    print "Please enter your two-character ISO3166 country code. (Default is US, ZZ for global headends.)\n";
+    print "> ";
+    chomp ($country = <STDIN>);
+    if ($country eq "")
+    {
+        $country = "US";
+    }
+    $country = uc($country);
+}
+
+if ($zipcode eq "")
+{    
     print "Please enter your zip code / postal code to ";
     print "download headends for your area.\n";
-    print "5 digits for U.S., 6 characters for Canada.\n";
-    print "Two-character ISO3166 code for international.\n";
-    print "> ";
+    print "5 digits for U.S., 4 characters for Canada.\n";
     chomp( $zipcode = <STDIN> );
     $zipcode = uc($zipcode);
+}
 
 $randhash = &login_to_sd( $username, $password );
 &print_status($randhash);
@@ -305,11 +288,11 @@ $randhash = &login_to_sd( $username, $password );
 
 if ($getOnlyMySubscribedLineups)
 {
-    $response = &get_headends( $randhash, "" );
+    $response = &get_headends( $randhash, "", $country );
 }
 else
 {
-    $response = &get_headends( $randhash, $zipcode );
+    $response = &get_headends( $randhash, $zipcode, $country );
 }
 
 foreach my $e ( @{ $response->{"data"} } )
@@ -474,7 +457,7 @@ sub login_to_sd()
 
     my $response = JSON->new->utf8->decode( &send_request($json_text) );
 
-    if ( $response->{"response"} eq "ERROR" )
+    if ( $response->{"code"} != 0 )
     {
         print "Received error from server:\n";
         print $response->{"message"}, "\nExiting.\n";
@@ -504,16 +487,16 @@ sub print_status()
     }
     my $response = JSON->new->utf8->decode( &send_request($json_text) );
 
-    if ( $response->{"response"} eq "ERROR" )
+    if ( $response->{"code"} == 3000 )
     {
-        print "Received error from server:\n";
-        print $response->{"message"}, "\nExiting.\n";
+        print "Server is offline for maintenance. Exiting.\n";
         exit;
     }
 
-    if ( $response->{"response"} eq "OFFLINE" )
+    if ( $response->{"code"} != 0 )
     {
-        print "Server is offline for maintenance. Exiting.\n";
+        print "Received error from server:\n";
+        print $response->{"message"}, "\nExiting.\n";
         exit;
     }
 
@@ -583,7 +566,7 @@ sub download_schedules()
     }
     my $response = JSON->new->utf8->decode( &send_request($json_text) );
 
-    if ( $response->{"response"} eq "ERROR" )
+    if ( $response->{"code"} != 0 )
     {
         print "Received error from server:\n";
         print $response->{"message"}, "\nExiting.\n";
@@ -633,7 +616,7 @@ sub download_programs()
     }
     my $response = JSON->new->utf8->decode( &send_request($json_text) );
 
-    if ( $response->{"response"} eq "ERROR" )
+    if ( $response->{"code"} != 0 )
     {
         print "Received error from server:\n";
         print $response->{"message"}, "\nExiting.\n";
@@ -654,15 +637,19 @@ sub get_headends()
     # geographic location.
 
     $randhash = $_[0];
-    my $to_get;
+    my %to_get;
 
     if ( $_[1] ne "" )
     {
-        $to_get = "PC:" . $_[1];
+    %to_get = (
+        "postalcode" => "PC:" . $_[1],
+        "country" => $_[2]);
     }
     else
     {
-        $to_get = "";
+    %to_get = (
+        "postalcode" => "Subscribed",
+        "country" => "ZZ");
     }
 
     print "Retrieving headends.\n";
@@ -671,7 +658,7 @@ sub get_headends()
 
     $req{1}->{"action"}   = "get";
     $req{1}->{"object"}   = "headends";
-    $req{1}->{"request"}  = $to_get;
+    $req{1}->{"request"}  = \%to_get;
     $req{1}->{"api"}      = $api;
     $req{1}->{"randhash"} = $randhash;
 
@@ -683,7 +670,7 @@ sub get_headends()
     }
     my $response = JSON->new->utf8->decode( &send_request($json_text) );
 
-    if ( $response->{"response"} eq "ERROR" )
+    if ( $response->{"code"} != 0 )
     {
         print "Received error from server:\n";
         print $response->{"message"}, "\nExiting.\n";
@@ -730,7 +717,7 @@ sub download_headend()
     }
     my $response = JSON->new->utf8->decode( &send_request($json_text) );
 
-    if ( $response->{"response"} eq "ERROR" )
+    if ( $response->{"code"} != 0 )
     {
         print "Received error from server:\n";
         print $response->{"message"}, "\nExiting.\n";
@@ -764,7 +751,7 @@ sub change_password()
     }
     my $response = JSON->new->utf8->decode( &send_request($json_text) );
 
-    if ( $response->{"response"} eq "ERROR" )
+    if ( $response->{"code"} != 0 )
     {
         print "Received error from server:\n";
         print $response->{"message"}, "\nExiting.\n";
@@ -808,7 +795,7 @@ sub metadata_update()
     }
     my $response = JSON->new->utf8->decode( &send_request($json_text) );
 
-    if ( $response->{"response"} eq "ERROR" )
+    if ( $response->{"code"} != 0 )
     {
         print "Received error from server:\n";
         print $response->{"message"}, "\nExiting.\n";
@@ -852,7 +839,7 @@ sub add_or_delete_headend()
     }
     my $response = JSON->new->utf8->decode( &send_request($json_text) );
 
-    if ( $response->{"response"} eq "ERROR" )
+    if ( $response->{"code"} != 0 )
     {
         print "Received error from server:\n";
         print $response->{"message"}, "\nExiting.\n";
@@ -860,11 +847,6 @@ sub add_or_delete_headend()
     }
 
     print "Successfully sent Headend request.\n";
-
-    if ($debugenabled)
-    {
-        print Dumper($response);
-    }
 
     return;
 
@@ -893,73 +875,15 @@ sub ackMessage()
     }
     my $response = JSON->new->utf8->decode( &send_request($json_text) );
 
-    if ( $response->{"response"} eq "ERROR" )
+    if ( $response->{"code"} != 0 )
     {
         print "Received error from server:\n";
         print $response->{"message"}, "\nExiting.\n";
         exit;
     }
     print "Successfully sent delete message request.\n";
-    if ($debugenabled)
-    {
-        print Dumper($response);
-    }
 
     return;
-
-}
-
-sub downloadMetadata()
-{
-
-    # Gets a .zip file from the server.
-    
-    my %req;
-    my @tempArray;
-    my $modified;
-
-    $randhash = $_[0];
-
-    # At some point we may dynamically generate metadata on the server, but as
-    # of 2013-02-21 it's a static file, so we don't need to generate a "fancy"
-    # request.
-
-    #    foreach ( keys %metadataToGet )
-    #    {
-    #        if ($debugenabled) { print "to get: $_\n"; }
-    #        push( @tempArray, $_ );
-    #    }
-
-    $req{1}->{"action"}   = "get";
-    $req{1}->{"randhash"} = $randhash;
-    $req{1}->{"object"}   = "metadata";
-
-    #    $req{1}->{"modified"} = $metadata + 0;
-    #    $req{1}->{"request"}  = \@tempArray;
-
-    $req{1}->{"api"} = $api;
-
-    my $json1     = new JSON::XS;
-    my $json_text = $json1->utf8(1)->encode( $req{1} );
-    if ($debugenabled)
-    {
-        print "download->metadata: created $json_text\n";
-    }
-
-    my $response = JSON->new->utf8->decode( &send_request($json_text) );
-
-    if ( $response->{"response"} eq "ERROR" )
-    {
-        print "Received error from server:\n";
-        print $response->{"message"}, "\nExiting.\n";
-        exit;
-    }
-
-    my $url      = $response->{"URL"};
-    my $fileName = $response->{"filename"};
-
-    print "url is: $url filename is $fileName\n";
-    $m->get( $url, ':content_file' => $fileName );
 
 }
 
