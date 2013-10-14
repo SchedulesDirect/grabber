@@ -37,11 +37,13 @@ This script supports the following command line arguments.
                         assist in troubleshooting any issues.
 
 --username              Login credentials.
+
 --password              Login credentials. NOTE: These will be visible in "ps".
 
 --country               To obtain the headends for a particular country, specify
                         the ISO3166 two-character country code. If not specified,
                         the script assumes "US".
+
 --zipcode               When obtaining the channel list from Schedules
                         Direct you can supply your 5-digit zip code or
                         4-character postal code to get a list of cable TV
@@ -53,7 +55,9 @@ This script supports the following command line arguments.
 --metadataupdate        Updates incorrect metdata.
 
 --add                   Add a headend.
+
 --delete                Delete a headend.
+
 --subscribed            Retrieve only the subscribed headends.
 
 --ack                   Acknowlege a message, so that it doesn't appear
@@ -97,6 +101,6 @@ for users without extensive modification.
 The beta service is open to all Schedules Direct users. Developers should
 use the "Developers Corner" forum at
 
-http://http://forums.schedulesdirect.org/viewforum.php?f=8
+http://forums.schedulesdirect.org/viewforum.php?f=8
 
 for assistance.
