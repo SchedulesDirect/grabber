@@ -14,8 +14,8 @@ use Digest::SHA qw(sha1_hex);
 # you probably want
 # use Digest::SHA1 qw(sha1_hex);
 
-my $version = "0.23";
-my $date    = "2013-10-11";
+my $version = "0.24";
+my $date    = "2013-10-21";
 
 my @lineupdata;
 my $i = 0;
@@ -73,14 +73,14 @@ if ($useBetaServer)
     $baseurl = "http://23.21.174.111";
     print "Using beta server.\n";
     # API must match server version.
-    $api = 20130709;
+    $api = 20131021;
 }
 else
 {
     $baseurl = "https://data2.schedulesdirect.org";
     print "Using production server.\n";
     # API must match server version.
-    $api = 20130512;
+    $api = 20130709;
 }
 
 if ($help)
